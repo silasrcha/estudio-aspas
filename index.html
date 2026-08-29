@@ -123,6 +123,14 @@ h1 .dc {
   color: var(--azul-vivo);
 }
 header p { margin: 0; color: var(--ink-3); font-size: 12.5px; }
+/* volta para o painel que lista todos os estúdios */
+header .voltar{align-self:center;display:inline-flex;align-items:center;gap:6px;
+  padding:5px 9px;border:1px solid var(--line);border-radius:6px;text-decoration:none;
+  white-space:nowrap;font:600 9.5px/1 "Encode Sans Condensed",sans-serif;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+  transition:color .15s,border-color .15s,background .15s}
+header .voltar:hover{color:var(--ink);border-color:var(--accent);background:#ffffff0d}
+header .voltar svg{width:11px;height:11px;fill:currentColor;flex:none}
 /* Sem a onda aqui: a barra de 4 cores no topo já faz o papel da marca, e a
    onda cortada a 6px contra o palco escuro virava fileira de bolas. */
 
@@ -300,6 +308,7 @@ canvas#tela.arrastando { cursor: grabbing; }
   <h1><span class="g">ASPAS</span><span class="dc">DEBATE</span></h1>
   <p>Cole o texto, escolha o modelo, envie a foto e baixe pronto.</p>
   <span class="selo">MR 22</span>
+  <a class="voltar" href="https://silasrcha.github.io/painel-estudios/" title="Voltar para o painel com todos os estúdios"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z"/></svg>Ferramentas</a>
 </header>
 
 <main>
