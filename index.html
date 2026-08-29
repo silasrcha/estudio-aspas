@@ -316,6 +316,21 @@ canvas#tela.arrastando { cursor: grabbing; }
   <section class="painel">
 
     <div class="campo">
+      <span class="rot">Foto de fundo</span>
+      <div class="dropzone" id="drop" tabindex="0" role="button">
+        <strong id="dropTitulo">Escolher foto</strong>
+        arraste aqui ou clique para procurar
+      </div>
+      <input type="file" id="arquivo" accept="image/*" hidden />
+      <div class="range">
+        <span class="rot" style="min-width:42px">Zoom</span>
+        <input type="range" id="zoom" min="100" max="300" value="100" />
+        <span class="valor" id="zoomVal">100%</span>
+      </div>
+      <p class="aviso">Arraste a foto na prévia para reposicionar.</p>
+    </div>
+
+    <div class="campo">
       <span class="rot">Formato</span>
       <div class="opcoes linha" id="formatos"></div>
     </div>
@@ -341,21 +356,6 @@ canvas#tela.arrastando { cursor: grabbing; }
     </div>
 
     <div class="campo">
-      <span class="rot">Foto de fundo</span>
-      <div class="dropzone" id="drop" tabindex="0" role="button">
-        <strong id="dropTitulo">Escolher foto</strong>
-        arraste aqui ou clique para procurar
-      </div>
-      <input type="file" id="arquivo" accept="image/*" hidden />
-      <div class="range">
-        <span class="rot" style="min-width:42px">Zoom</span>
-        <input type="range" id="zoom" min="100" max="300" value="100" />
-        <span class="valor" id="zoomVal">100%</span>
-      </div>
-      <p class="aviso">Arraste a foto na prévia para reposicionar.</p>
-    </div>
-
-    <div class="campo">
       <span class="rot">Posição do card</span>
       <div class="range">
         <input type="range" id="posy" min="0" max="100" value="80" />
@@ -363,8 +363,8 @@ canvas#tela.arrastando { cursor: grabbing; }
       </div>
       <span class="rot">Tamanho do card</span>
       <div class="range">
-        <input type="range" id="escala" min="90" max="135" value="112" />
-        <span class="valor" id="escalaVal">112%</span>
+        <input type="range" id="escala" min="90" max="135" value="100" />
+        <span class="valor" id="escalaVal">100%</span>
       </div>
       <label class="check"><input type="checkbox" id="sombra" checked /> Sombra suave sob o card</label>
     </div>
@@ -449,7 +449,7 @@ canvas#tela.arrastando { cursor: grabbing; }
     zoom: 1,
     panX: 0, panY: 0,
     posy: 0.80,
-    escala: 1.12,
+    escala: 1,
     sombra: true,
     legendaOn: true,
     legenda: LEGENDA_PADRAO
