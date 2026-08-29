@@ -704,17 +704,35 @@ canvas#tela.arrastando { cursor: grabbing; }
     }
   }
 
+  /* No Story a legenda continua de pé na lateral direita. No Feed ela segue o
+     frame LEGENDA do Figma: deitada no rodapé, margem de 72 dos dois lados,
+     caixa de 936 × 20 com a base em y=1398. */
+  var LEGENDA_FEED = { x: 72, larg: 936, y: 1398, alt: 20, fonte: '400 17px Arial', ls: '0.17px' };
+
   function desenharLegenda() {
     var f = fmt();
     ctx.save();
-    ctx.translate(f.w - 24, f.h / 2);
-    ctx.rotate(Math.PI / 2);
-    ctx.font = '400 17px "Work Sans"';
-    ctx.fillStyle = 'rgba(255,255,255,.92)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    var linhas = quebrar(st.legenda, f.h - 120, '400 17px "Work Sans"');
-    for (var i = 0; i < linhas.length; i++) ctx.fillText(linhas[i], 0, i * 21);
+    if (st.formato === 'feed') {
+      var g = LEGENDA_FEED;
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      /* O texto padrão cabe numa linha só, como no Figma. Se alguém escrever
+         mais, as linhas extras sobem — a última fica sempre na altura do
+         desenho, senão a legenda invadiria a borda de baixo. */
+      var lin = quebrar(st.legenda, g.larg, g.fonte, g.ls);
+      var base = g.y + g.alt / 2;
+      for (var j = 0; j < lin.length; j++)
+        ctx.fillText(lin[j], g.x, base - (lin.length - 1 - j) * g.alt);
+    } else {
+      ctx.translate(f.w - 24, f.h / 2);
+      ctx.rotate(Math.PI / 2);
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      var linhas = quebrar(st.legenda, f.h - 120, '400 17px "Work Sans"');
+      for (var i = 0; i < linhas.length; i++) ctx.fillText(linhas[i], 0, i * 21);
+    }
     ctx.restore();
   }
 
