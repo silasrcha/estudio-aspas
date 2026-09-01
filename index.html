@@ -178,6 +178,18 @@ input[type="text"]:focus-visible, textarea:focus-visible, select:focus-visible {
   outline-offset: 1px;
 }
 
+/* swatches de cor das aspas: quadradinho da cor, sem opacidade — num seletor
+   de cor a opacidade mentiria sobre a cor que a pessoa vai receber. */
+.linha-cores { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.linha-cores .qual { flex: none; min-width: 78px; font-size: 12px; color: var(--ink-3); }
+.cores { display: flex; gap: 7px; flex-wrap: wrap; }
+.cores button { width: 26px; height: 26px; padding: 0; cursor: pointer;
+  border-radius: 6px; border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.4); transition: border-color .12s; }
+.cores button:hover { border-color: var(--ink-3); }
+.cores button.on { border-color: var(--accent); }
+.cores button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .opcoes { display: flex; flex-direction: column; gap: 6px; }
 .opcoes.linha { flex-direction: row; gap: 8px; }
 .opcoes.linha .op { flex: 1; justify-content: center; }
@@ -316,21 +328,6 @@ canvas#tela.arrastando { cursor: grabbing; }
   <section class="painel">
 
     <div class="campo">
-      <span class="rot">Foto de fundo</span>
-      <div class="dropzone" id="drop" tabindex="0" role="button">
-        <strong id="dropTitulo">Escolher foto</strong>
-        arraste aqui ou clique para procurar
-      </div>
-      <input type="file" id="arquivo" accept="image/*" hidden />
-      <div class="range">
-        <span class="rot" style="min-width:42px">Zoom</span>
-        <input type="range" id="zoom" min="100" max="300" value="100" />
-        <span class="valor" id="zoomVal">100%</span>
-      </div>
-      <p class="aviso">Arraste a foto na prévia para reposicionar.</p>
-    </div>
-
-    <div class="campo">
       <span class="rot">Formato</span>
       <div class="opcoes linha" id="formatos"></div>
     </div>
@@ -338,6 +335,15 @@ canvas#tela.arrastando { cursor: grabbing; }
     <div class="campo">
       <span class="rot">Modelo do card</span>
       <div class="opcoes" id="modelos"></div>
+    </div>
+
+    <!-- Só o modelo "Barra no topo + aspas" desenha as aspas, então o bloco
+         aparece só com ele escolhido. Tamanho e posição delas continuam fixos,
+         medidos do Figma: aqui muda a cor e nada mais. -->
+    <div class="campo" id="campoAspas" hidden>
+      <span class="rot">Cor das aspas</span>
+      <div class="linha-cores"><span class="qual">Abertura</span><div class="cores" id="coresA"></div></div>
+      <div class="linha-cores"><span class="qual">Fechamento</span><div class="cores" id="coresB"></div></div>
     </div>
 
     <div class="campo">
@@ -356,6 +362,21 @@ canvas#tela.arrastando { cursor: grabbing; }
     </div>
 
     <div class="campo">
+      <span class="rot">Foto de fundo</span>
+      <div class="dropzone" id="drop" tabindex="0" role="button">
+        <strong id="dropTitulo">Escolher foto</strong>
+        arraste aqui ou clique para procurar
+      </div>
+      <input type="file" id="arquivo" accept="image/*" hidden />
+      <div class="range">
+        <span class="rot" style="min-width:42px">Zoom</span>
+        <input type="range" id="zoom" min="100" max="300" value="100" />
+        <span class="valor" id="zoomVal">100%</span>
+      </div>
+      <p class="aviso">Arraste a foto na prévia para reposicionar.</p>
+    </div>
+
+    <div class="campo">
       <span class="rot">Posição do card</span>
       <div class="range">
         <input type="range" id="posy" min="0" max="100" value="80" />
@@ -363,8 +384,8 @@ canvas#tela.arrastando { cursor: grabbing; }
       </div>
       <span class="rot">Tamanho do card</span>
       <div class="range">
-        <input type="range" id="escala" min="90" max="135" value="100" />
-        <span class="valor" id="escalaVal">100%</span>
+        <input type="range" id="escala" min="90" max="135" value="112" />
+        <span class="valor" id="escalaVal">112%</span>
       </div>
       <label class="check"><input type="checkbox" id="sombra" checked /> Sombra suave sob o card</label>
     </div>
@@ -449,7 +470,8 @@ canvas#tela.arrastando { cursor: grabbing; }
     zoom: 1,
     panX: 0, panY: 0,
     posy: 0.80,
-    escala: 1,
+    corAspaA: COR.amarelo, corAspaB: COR.verde,
+    escala: 1.12,
     sombra: true,
     legendaOn: true,
     legenda: LEGENDA_PADRAO
@@ -472,6 +494,26 @@ canvas#tela.arrastando { cursor: grabbing; }
       im.onerror = function () { rej(new Error('falhou: ' + src.slice(0, 40))); };
       im.src = src;
     });
+  }
+
+  /* As aspas são PNG chapado com alfa. Para trocar a cor sem trocar o arquivo,
+     redesenha num canvas fora da tela e pinta por dentro do recorte com
+     'source-in' — preserva o desenho e o antisserrilhado da borda. O resultado
+     fica em cache por nome+cor, senão recoloriria a cada quadro. */
+  var cacheAspa = {};
+  function aspaColorida(nome, cor) {
+    var k = nome + '|' + cor;
+    if (cacheAspa[k]) return cacheAspa[k];
+    var im = img[nome];
+    var o = document.createElement('canvas');
+    o.width = im.naturalWidth; o.height = im.naturalHeight;
+    var q = o.getContext('2d');
+    q.drawImage(im, 0, 0);
+    q.globalCompositeOperation = 'source-in';
+    q.fillStyle = cor;
+    q.fillRect(0, 0, o.width, o.height);
+    cacheAspa[k] = o;
+    return o;
   }
 
   function iniciar() {
@@ -657,8 +699,8 @@ canvas#tela.arrastando { cursor: grabbing; }
 
     // decoração da frente
     if (m.aspas) {
-      ctx.drawImage(img.aspasAm, cx - 33, cy - 63, 142, 94);
-      ctx.drawImage(img.aspasVe, cx + 687, cy + H - 47, 142, 94);
+      ctx.drawImage(aspaColorida('aspasAm', st.corAspaA), cx - 33, cy - 63, 142, 94);
+      ctx.drawImage(aspaColorida('aspasVe', st.corAspaB), cx + 687, cy + H - 47, 142, 94);
     }
     if (m.geo === 'inf') ctx.drawImage(img.geoInfFrente, cx + 719, cy + H - 148, 111, 173);
     if (m.geo === 'sup') ctx.drawImage(img.geoSupFrente, cx + 660.13, cy - 22.13, 174, 112);
@@ -782,9 +824,15 @@ canvas#tela.arrastando { cursor: grabbing; }
       l.className = 'op';
       var mini = '<span class="mini">' + miniatura(m) + '</span>';
       l.innerHTML = '<input type="radio" name="modelo" value="' + m.id + '"' + (m.id === st.modelo ? ' checked' : '') + ' />' + mini + m.nome;
-      l.querySelector('input').addEventListener('change', function () { st.modelo = m.id; desenhar(); });
+      l.querySelector('input').addEventListener('change', function () {
+        st.modelo = m.id; sincronizarAspas(); desenhar();
+      });
       cm.appendChild(l);
     });
+
+    montarCores('coresA', 'corAspaA');
+    montarCores('coresB', 'corAspaB');
+    sincronizarAspas();
 
     $('texto').value = st.texto;
     $('nome').value = st.nome;
@@ -819,6 +867,33 @@ canvas#tela.arrastando { cursor: grabbing; }
     ligarArraste();
     $('baixar').addEventListener('click', baixar);
   }
+
+  /* Paleta da campanha, as mesmas quatro cores das barras da marca. */
+  var CORES_ASPA = [
+    { nome: 'Amarelo', cor: COR.amarelo }, { nome: 'Verde', cor: COR.verde },
+    { nome: 'Branco', cor: COR.branco },   { nome: 'Azul', cor: COR.azul }
+  ];
+  function montarCores(idCaixa, chave) {
+    var caixa = $(idCaixa);
+    caixa.innerHTML = '';
+    CORES_ASPA.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.style.background = c.cor;
+      b.title = c.nome;
+      b.setAttribute('aria-label', c.nome);
+      b.className = (st[chave] === c.cor) ? 'on' : '';
+      b.addEventListener('click', function () {
+        st[chave] = c.cor;
+        caixa.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        desenhar();
+      });
+      caixa.appendChild(b);
+    });
+  }
+  /* o bloco só existe para o modelo que desenha aspas */
+  function sincronizarAspas() { $('campoAspas').hidden = !mod().aspas; }
 
   function miniatura(m) {
     if (m.barra === 'topo') return '<span style="left:0;top:0;right:0;height:4px;background:linear-gradient(90deg,#4EA21D 0 32%,#FCD700 32% 58%,#fff 58% 70%,#123C90 70% 100%)"></span>';
