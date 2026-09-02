@@ -470,7 +470,7 @@ canvas#tela.arrastando { cursor: grabbing; }
     zoom: 1,
     panX: 0, panY: 0,
     posy: 0.80,
-    corAspaA: COR.amarelo, corAspaB: COR.verde,
+    corAspaA: null, corAspaB: null,   // preenchidos com CORES_ASPA no arranque
     escala: 1.12,
     sombra: true,
     legendaOn: true,
@@ -496,24 +496,43 @@ canvas#tela.arrastando { cursor: grabbing; }
     });
   }
 
-  /* As aspas são PNG chapado com alfa. Para trocar a cor sem trocar o arquivo,
-     redesenha num canvas fora da tela e pinta por dentro do recorte com
-     'source-in' — preserva o desenho e o antisserrilhado da borda. O resultado
-     fica em cache por nome+cor, senão recoloriria a cada quadro. */
+  /* As aspas NÃO são desenho de uma cor só: cada uma tem a bola num tom, o rabo
+     noutro, e uma faixa branca que é o fundo do card embutido no PNG. Pintar
+     tudo de uma cor (o que 'source-in' faria) achata os três e vira um bloco.
+     Então a troca é por remapeamento: cada pixel vai para o tom de destino
+     correspondente ao tom de origem mais próximo, e o branco fica branco. */
+  var TONS_ORIG = {
+    aspasAm: { bola: [249, 180, 52], rabo: [255, 221, 0] },
+    aspasVe: { bola: [28, 161, 56],  rabo: [0, 141, 63] }
+  };
   var cacheAspa = {};
-  function aspaColorida(nome, cor) {
-    var k = nome + '|' + cor;
+  function aspaColorida(nome, esq) {
+    var k = nome + '|' + esq.bola + esq.rabo;
     if (cacheAspa[k]) return cacheAspa[k];
-    var im = img[nome];
+    var im = img[nome], src = TONS_ORIG[nome];
     var o = document.createElement('canvas');
     o.width = im.naturalWidth; o.height = im.naturalHeight;
     var q = o.getContext('2d');
     q.drawImage(im, 0, 0);
-    q.globalCompositeOperation = 'source-in';
-    q.fillStyle = cor;
-    q.fillRect(0, 0, o.width, o.height);
+    var d = q.getImageData(0, 0, o.width, o.height), px = d.data;
+    var alvos = [hexRgb(esq.bola), hexRgb(esq.rabo), [255, 255, 255]];
+    var origens = [src.bola, src.rabo, [255, 255, 255]];
+    for (var i = 0; i < px.length; i += 4) {
+      if (px[i + 3] === 0) continue;
+      var melhor = 0, dist = Infinity;
+      for (var j = 0; j < 3; j++) {
+        var a = px[i] - origens[j][0], b = px[i + 1] - origens[j][1], c = px[i + 2] - origens[j][2];
+        var v = a * a + b * b + c * c;
+        if (v < dist) { dist = v; melhor = j; }
+      }
+      px[i] = alvos[melhor][0]; px[i + 1] = alvos[melhor][1]; px[i + 2] = alvos[melhor][2];
+    }
+    q.putImageData(d, 0, 0);
     cacheAspa[k] = o;
     return o;
+  }
+  function hexRgb(h) {
+    return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)];
   }
 
   function iniciar() {
@@ -830,6 +849,8 @@ canvas#tela.arrastando { cursor: grabbing; }
       cm.appendChild(l);
     });
 
+    if (!st.corAspaA) st.corAspaA = CORES_ASPA[0];   // amarelo na abertura
+    if (!st.corAspaB) st.corAspaB = CORES_ASPA[1];   // verde no fechamento
     montarCores('coresA', 'corAspaA');
     montarCores('coresB', 'corAspaB');
     sincronizarAspas();
@@ -868,10 +889,15 @@ canvas#tela.arrastando { cursor: grabbing; }
     $('baixar').addEventListener('click', baixar);
   }
 
-  /* Paleta da campanha, as mesmas quatro cores das barras da marca. */
+  /* Cada esquema traz o par bola+rabo, porque a aspa é de dois tons. Os pares
+     saem da paleta da identidade, do mais claro (bola) ao mais escuro (rabo) —
+     é a relação que os dois desenhos originais já tinham. Sem branco: a faixa
+     branca do PNG é o fundo do card, e uma aspa branca sumiria nela. */
   var CORES_ASPA = [
-    { nome: 'Amarelo', cor: COR.amarelo }, { nome: 'Verde', cor: COR.verde },
-    { nome: 'Branco', cor: COR.branco },   { nome: 'Azul', cor: COR.azul }
+    { nome: 'Amarelo',    bola: '#FAB434', rabo: '#FFDD00' },
+    { nome: 'Verde',      bola: '#52AE32', rabo: '#008D3F' },
+    { nome: 'Azul',       bola: '#0069B3', rabo: '#004F9F' },
+    { nome: 'Azul claro', bola: '#009FE3', rabo: '#0069B3' }
   ];
   function montarCores(idCaixa, chave) {
     var caixa = $(idCaixa);
@@ -879,12 +905,13 @@ canvas#tela.arrastando { cursor: grabbing; }
     CORES_ASPA.forEach(function (c) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.style.background = c.cor;
+      /* o swatch mostra os dois tons do esquema, não um só */
+      b.style.background = 'linear-gradient(135deg,' + c.bola + ' 0 50%,' + c.rabo + ' 50% 100%)';
       b.title = c.nome;
       b.setAttribute('aria-label', c.nome);
-      b.className = (st[chave] === c.cor) ? 'on' : '';
+      b.className = (st[chave].nome === c.nome) ? 'on' : '';
       b.addEventListener('click', function () {
-        st[chave] = c.cor;
+        st[chave] = c;
         caixa.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
         b.classList.add('on');
         desenhar();
