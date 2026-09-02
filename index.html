@@ -393,6 +393,8 @@ canvas#tela.arrastando { cursor: grabbing; }
     <div class="campo">
       <label class="check"><input type="checkbox" id="temlegenda" checked /> Legenda eleitoral</label>
       <textarea id="legenda" style="min-height:64px;font-size:13px"></textarea>
+      <div class="linha-cores"><span class="qual">Cor</span><div class="cores" id="coresLegenda"></div></div>
+      <label class="check"><input type="checkbox" id="legsombra" /> Sombra na legenda</label>
     </div>
 
     <div class="campo">
@@ -474,6 +476,8 @@ canvas#tela.arrastando { cursor: grabbing; }
     escala: 1.12,
     sombra: true,
     legendaOn: true,
+    legendaCor: '#FFFFFF',
+    legendaSombra: false,
     legenda: LEGENDA_PADRAO
   };
 
@@ -773,9 +777,21 @@ canvas#tela.arrastando { cursor: grabbing; }
   function desenharLegenda() {
     var f = fmt();
     ctx.save();
+    /* A sombra é o contraste do PRÓPRIO texto: escura atrás do branco, clara
+       atrás do preto. Sombra escura atrás de texto preto não ajudaria a ler.
+       Só desfoque, sem deslocamento: no Story a legenda é rotacionada, e um
+       deslocamento fixo cairia para um lado diferente em cada formato. */
+    /* Duas passadas: uma sombra só, medida sobre foto branca, deixava o texto
+       branco com amplitude 8 de 255 — invisível. Redesenhar por cima acumula a
+       sombra e o halo fica denso o bastante para o texto se destacar. */
+    var passos = st.legendaSombra ? 2 : 1;
+    if (st.legendaSombra) {
+      ctx.shadowColor = (st.legendaCor === '#FFFFFF') ? 'rgba(0,0,0,.85)' : 'rgba(255,255,255,.9)';
+      ctx.shadowBlur = 5;
+    }
     if (st.formato === 'feed') {
       var g = LEGENDA_FEED;
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = st.legendaCor;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       /* O texto padrão cabe numa linha só, como no Figma. Se alguém escrever
@@ -783,16 +799,18 @@ canvas#tela.arrastando { cursor: grabbing; }
          desenho, senão a legenda invadiria a borda de baixo. */
       var lin = quebrar(st.legenda, g.larg, g.fonte, g.ls);
       var base = g.y + g.alt / 2;
-      for (var j = 0; j < lin.length; j++)
-        ctx.fillText(lin[j], g.x, base - (lin.length - 1 - j) * g.alt);
+      for (var pf = 0; pf < passos; pf++)
+        for (var j = 0; j < lin.length; j++)
+          ctx.fillText(lin[j], g.x, base - (lin.length - 1 - j) * g.alt);
     } else {
       ctx.translate(f.w - 24, f.h / 2);
       ctx.rotate(Math.PI / 2);
-      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.fillStyle = st.legendaCor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
       var linhas = quebrar(st.legenda, f.h - 120, '400 17px "Work Sans"');
-      for (var i = 0; i < linhas.length; i++) ctx.fillText(linhas[i], 0, i * 21);
+      for (var ps = 0; ps < passos; ps++)
+        for (var i = 0; i < linhas.length; i++) ctx.fillText(linhas[i], 0, i * 21);
     }
     ctx.restore();
   }
@@ -847,6 +865,12 @@ canvas#tela.arrastando { cursor: grabbing; }
         st.modelo = m.id; sincronizarAspas(); desenhar();
       });
       cm.appendChild(l);
+    });
+
+    montarCoresLegenda();
+    $('legsombra').checked = st.legendaSombra;
+    $('legsombra').addEventListener('change', function () {
+      st.legendaSombra = this.checked; desenhar();
     });
 
     if (!st.corAspaA) st.corAspaA = CORES_ASPA[0];   // amarelo na abertura
@@ -919,6 +943,29 @@ canvas#tela.arrastando { cursor: grabbing; }
       caixa.appendChild(b);
     });
   }
+  /* Só branco e preto: a legenda é exigência legal e precisa ler sobre
+     qualquer foto — cor da marca aqui trocaria legibilidade por enfeite. */
+  var CORES_LEGENDA = [{ nome: 'Branco', cor: '#FFFFFF' }, { nome: 'Preto', cor: '#000000' }];
+  function montarCoresLegenda() {
+    var caixa = $('coresLegenda');
+    caixa.innerHTML = '';
+    CORES_LEGENDA.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.style.background = c.cor;
+      b.title = c.nome;
+      b.setAttribute('aria-label', c.nome);
+      b.className = (st.legendaCor === c.cor) ? 'on' : '';
+      b.addEventListener('click', function () {
+        st.legendaCor = c.cor;
+        caixa.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        desenhar();
+      });
+      caixa.appendChild(b);
+    });
+  }
+
   /* o bloco só existe para o modelo que desenha aspas */
   function sincronizarAspas() { $('campoAspas').hidden = !mod().aspas; }
 
