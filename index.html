@@ -770,9 +770,11 @@ canvas#tela.arrastando { cursor: grabbing; }
   }
 
   /* No Story a legenda continua de pé na lateral direita. No Feed ela segue o
-     frame LEGENDA do Figma: deitada no rodapé, margem de 72 dos dois lados,
-     caixa de 936 × 20 com a base em y=1398. */
-  var LEGENDA_FEED = { x: 72, larg: 936, y: 1398, alt: 20, fonte: '400 17px Arial', ls: '0.17px' };
+     frame de referência do Figma (2476:785): deitada no rodapé, caixa de
+     907 × 20 em x=87, y=1418, Arial 17 sem entreletra. */
+  /* No Figma a caixa abraça o texto (907 é a largura do texto de lá, não um
+     limite): uma linha só a partir de x=87. Quebra só se chegar a 40 da borda. */
+  var LEGENDA_FEED = { x: 87, larg: 1080 - 87 - 40, y: 1418, alt: 20, fonte: '400 17px Arial', ls: '0px' };
 
   function desenharLegenda() {
     var f = fmt();
